@@ -6,26 +6,32 @@ struct Suffixes {
         case Asc, Desc
         
         mutating func toogle() {
-                switch self {
-                case .Asc:
-                    self = .Desc
-                case .Desc:
-                    self = .Asc
-                }
+            switch self {
+            case .Asc:
+                self = .Desc
+            case .Desc:
+                self = .Asc
             }
+        }
     }
     
-    init() {}
+    let taskQueue = TaskQueue(concurrency: 1)
+    let storage: StorageService
     
-    init(text: String) {
-        self.init()
+    init(storage: StorageService) {
+        self.storage = storage
+    }
+    
+    private var content: [String: Int] = [:]
+    
+    @MainActor mutating func research(text: String) {
+        content.removeAll()
+        storage.clear()
         for element in text.components(separatedBy: " ") {
             let suffixes = SuffixSequence(element)
             self.append(suffixes)
         }
     }
-    
-    private var content: [String: Int] = [:]
     
     mutating private func append(_ sequence: SuffixSequence) {
         for suffix in sequence {
@@ -34,11 +40,7 @@ struct Suffixes {
     }
     
     mutating private func add(_ s: String) {
-        if let count = content[s] {
-            content[s] = count + 1
-        } else {
-            content[s] = 1
-        }
+        content[s] = (content[s] ?? 0) + 1
     }
     
     var max: Int {
@@ -52,12 +54,22 @@ struct Suffixes {
     var allCount: Int {
         content.reduce(0, { res, dict in res + dict.value})
     }
-
-    func getSorted(_ sort: Sort = .Asc, search: String? = nil) -> [(String, Int)] {
+    
+    
+    
+    func getSorted(_ sort: Sort = .Asc, search: String? = nil) async -> [(String, Int)] {
         guard let search = search, !search.isEmpty else {
             return sort == .Asc ? content.sorted(by: < ) : content.sorted(by: >)
         }
-        let filter = content.filter({$0.key.lowercased().contains(search.lowercased())})
+        
+        let result = try? await taskQueue.enqueue {
+            content.filter({$0.key.lowercased().contains(search.lowercased())})
+        }
+        
+        guard let filter = result?.result, let time = result?.time else {return []}
+        
+        await  storage.append(Searches(text: search, time: time))
+        
         return sort == .Asc ? filter.sorted(by: < ) : filter.sorted(by: >)
     }
     

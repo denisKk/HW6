@@ -38,16 +38,13 @@ public actor TaskQueue{
 
         let startTime = CFAbsoluteTimeGetCurrent()
         let result = try await operation()
-        let endTime = CFAbsoluteTimeGetCurrent()
-        let duration = endTime - startTime
+        let duration = CFAbsoluteTimeGetCurrent() - startTime
    
         return (result: result, time: duration)
     }
 
     private func tryRunEnqueued() {
-        guard !queue.isEmpty else { return }
-        guard running < concurrency else { return }
-
+        guard !queue.isEmpty, running < concurrency else { return }
         running += 1
         let continuation = queue.removeFirst()
         continuation.resume()

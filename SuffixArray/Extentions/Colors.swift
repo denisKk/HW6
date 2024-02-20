@@ -6,3 +6,4 @@ extension Color {
     static let lightGray = Color("lightGray")
     static let lemonGreen = Color("green")
 }
+

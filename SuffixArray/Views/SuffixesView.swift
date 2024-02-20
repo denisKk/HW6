@@ -3,17 +3,23 @@ import SwiftUI
 import Combine
 
 struct SuffixesView: View {
+    
+    @State var suffixArray: Suffixes
+    @FocusState var isFocused: Bool
+    
     @State var suffixText: String = .init()
-    @State var suffixArray: Suffixes = .init()
     @State var sort: Suffixes.Sort = .Asc
     @State var listMode: ListMode = .all
     @State var searchText: String = .init()
     @State var debouncedSearchText: String = .init()
     @State var dataArray: [(String, Int)] = .init()
-    @FocusState var isFocused: Bool
-    let searchTextPublisher = PassthroughSubject<String, Never>()
     
+    let searchTextPublisher = PassthroughSubject<String, Never>()
     let width: CGFloat = 100
+    
+    init(storage: StorageService) {
+        self.suffixArray = Suffixes(storage: storage)
+    }
     
     var body: some View {
         ZStack {
@@ -38,7 +44,8 @@ struct SuffixesView: View {
         }
         .animation(.easeInOut, value: listMode)
         .onChange(of: suffixText) { newValue in
-            suffixArray = Suffixes(text: newValue)
+            suffixArray.research(text: newValue)
+            searchText = ""
             Task {
                 dataArray = await suffixArray.getSorted(sort, search: debouncedSearchText)
             }
@@ -73,40 +80,42 @@ struct SuffixesView: View {
     var textField: some View {
         TextField("type text...",
                   text: Binding(
-                                          get: { suffixText },
-                                          set:
-                                              { (newValue, _) in
-                                                  if let _ = newValue.lastIndex(of: "\n") {
-                                                      isFocused = false
-                                                  } else {
-                                                      suffixText = newValue
-                                                  }
-                                              }
-                                        ), axis: .vertical)
-            .autocorrectionDisabled(true)
-            .textInputAutocapitalization(.never)
-            .submitLabel(.return)
-            .foregroundColor(.black)
-            .padding()
-            .font(.system(size: 24, weight: .light))
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.white)
-                    .shadow(radius: 0.9)
-            )
-            .padding(.horizontal)
-            .focused($isFocused)
-            
+                    get: { suffixText },
+                    set:
+                        { (newValue, _) in
+                            if let _ = newValue.lastIndex(of: "\n") {
+                                isFocused = false
+                            } else {
+                                suffixText = newValue
+                            }
+                        }
+                  ), axis: .vertical)
+        .autocorrectionDisabled(true)
+        .textInputAutocapitalization(.never)
+        .submitLabel(.return)
+        .foregroundColor(.black)
+        .padding()
+        .font(.system(size: 24, weight: .light))
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white)
+                .shadow(radius: 0.9)
+        )
+        .padding(.horizontal)
+        .focused($isFocused)
+        
     }
     
     @ViewBuilder
     var countLabels: some View {
+        let horizontalPadding: Double = 24
+        
         Group {
             labelWith(title: "All suffixes:", value: suffixArray.allCount)
             labelWith(title: "Unique suffixes:", value: suffixArray.uniqueCount)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, horizontalPadding)
     }
     
     @ViewBuilder
@@ -124,7 +133,7 @@ struct SuffixesView: View {
     var listViewAll: some View {
         
         let max = suffixArray.max
- 
+        
         VStack {
             ScrollView {
                 
@@ -154,7 +163,7 @@ struct SuffixesView: View {
                                     .stroke()
                                     .fill(.gray)
                             )
-                           
+                        
                             .overlay {
                                 HStack(spacing: 0) {
                                     Image(systemName: "magnifyingglass.circle")
@@ -216,7 +225,7 @@ struct SuffixesView: View {
                 ForEach(suffixArray.getTop10Triple(), id: \.0) { suffix in
                     
                     let w = Double(suffix.1) / Double(max) * width
-
+                    
                     HStack {
                         Text(suffix.0)
                             .font(.title3)
@@ -226,7 +235,7 @@ struct SuffixesView: View {
                                 .fill(Color.gray.opacity(0.2))
                                 .frame(maxWidth: w, alignment: .trailing)
                                 .padding(.trailing, 4)
-
+                            
                             Text("\(suffix.1)")
                         }
                     }
@@ -243,6 +252,6 @@ struct SuffixesView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        SuffixesView()
+        SuffixesView(storage: StorageService())
     }
 }

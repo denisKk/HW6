@@ -7,9 +7,25 @@
 
 import SwiftUI
 
+enum Tabs {
+    case suffixes
+    case history
+}
+
 struct MainScreen: View {
+    @State var selectionTab: Tabs = .suffixes
+    @EnvironmentObject var storage: StorageService
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        TabView(selection: $selectionTab) {
+            SuffixesView(storage: storage)
+                .tabItem { Text("Suffixes") }
+                .tag(Tabs.suffixes)
+            
+            HistoryView()
+                .tabItem { Text("History") }
+                .tag(Tabs.history)
+        }
     }
 }
 

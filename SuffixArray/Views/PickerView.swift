@@ -25,11 +25,12 @@ struct PickerItem: View {
     var isSelected: ListMode
     var caption: String
     let namespace: Namespace.ID
+    let textPadding: Double = 16
     
     var body: some View {
         Text(caption)
-            .padding(16)
-            .padding(.horizontal, 16)
+            .padding(textPadding)
+            .padding(.horizontal, textPadding)
             .frame(maxWidth: .infinity)
             .background{
                 if isSelected.description == caption {

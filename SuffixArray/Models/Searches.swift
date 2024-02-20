@@ -6,3 +6,8 @@
 //
 
 import Foundation
+
+struct Searches {
+    let text: String
+    let time: Double
+}
